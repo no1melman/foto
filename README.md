@@ -4,11 +4,13 @@
 
 - [dotnet 3.1.201 ](https://dotnet.microsoft.com/download/dotnet-core/3.1)
 - [chocolatey](https://chocolatey.org/) OR [brew](https://brew.sh/)
-- Helm 3 `choco install kubernetes-helm` OR `brew install helm`
-- Skaffold `choco install skaffold` OR `brew install skaffold`
+- Helm 3 `choco install kubernetes-helm` OR `brew install helm` (only if you do k8s up and running)
+- Skaffold `choco install skaffold` OR `brew install skaffold` (only if you do k8s up and running)
 - Docker (with Kubernetes available, enable through docker preferences or settings)
 
 ## Up and Running
+
+You can either do K8s OR docker compose, see the bottom of the readme for docker compose
 
 ```bash
 
@@ -84,3 +86,15 @@ Override the configuration through environment variables
 ## React UI
 
 See (documentation)[./services/ui/app]
+
+## Run using Docker
+
+At root of repo
+
+```bash
+  # -d runs detached mode so it doesn't hog your console output or die when ctrl-c
+  $ docker-compose up -d
+
+  # for cleanup
+  $ docker-compose down 
+```

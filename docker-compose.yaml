@@ -1,0 +1,31 @@
+version: "3.8"
+services:
+  mongo:
+    image: mongo
+    networks:
+      - backend 
+  foto-api:
+    build:
+      context: ./services/api
+    depends_on:
+      - mongo
+    environment:
+      - MongoHost=mongodb://mongo
+    networks:
+      - backend
+  foto-ui:
+    build:
+      context: ./services/ui/app
+    depends_on:
+      - foto-api
+    environment:
+    - PROXY_HOST=foto-api # because docker compose creates a network for us, these become addressable by service name
+    - NGINX_PORT=80
+    ports:
+    - "127.0.0.1:8080:80"
+    networks:
+      - default  # this is the outsite network, so this will get exposed to host
+      - backend  # this is an internal network, so won't expose api or database
+
+networks:
+  backend:
