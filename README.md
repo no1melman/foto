@@ -85,7 +85,7 @@ Override the configuration through environment variables
 
 ## React UI
 
-See (documentation)[./services/ui/app]
+See [documentation](./services/ui/app/README.md)
 
 ## Run using Docker
 
