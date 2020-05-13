@@ -54,7 +54,7 @@ export default function App() {
         }
       }
     };
-    xhr.open('POST', 'http://localhost:5000/photos', true);
+    xhr.open('POST', '/api/photos', true);
     xhr.send(form);
   };
 

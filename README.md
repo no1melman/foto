@@ -94,7 +94,31 @@ At root of repo
 ```bash
   # -d runs detached mode so it doesn't hog your console output or die when ctrl-c
   $ docker-compose up -d
+  # add --build if you make any changes and want them to appear on the next up.
 
   # for cleanup
   $ docker-compose down 
 ```
+
+Access the ui via `http://locahost:8080`
+
+## How to test it is working
+
+1. First load the UI up,  
+2. Make sure the network tab is open
+3. Drag a photo onto the Box, click Upload
+4. Look in the network tab for `photo` request, click it and click the response tab, you should see a response like below:
+
+```json
+[
+  {
+    "id": "5ebc69794c9238000187c33b",
+    "fileName": "DSC_0290.JPG",
+    "gridFsId": "5ebc69794c9238000187c338",
+    "contentType": "image/jpeg",
+    "contentDisposition": "form-data; name=\"input0\"; filename=\"DSC_0290.JPG\""
+  }
+]
+```
+
+The `id` field means it has been saved into mongo! The `gridfsId` means the photo was saved into mongo gridFs

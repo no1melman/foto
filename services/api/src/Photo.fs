@@ -113,7 +113,7 @@ let uploadPhoto (databaseFn: unit -> IMongoDatabase) : HttpHandler =
 
 
 let photoHandler getPhotos uploadPhoto deletePhoto = 
-    let path = "/photos"
+    let path = "/api/photos"
     choose [
         GET >=> choose [
             route path >=> getPhotos
@@ -122,7 +122,7 @@ let photoHandler getPhotos uploadPhoto deletePhoto =
             route path >=> uploadPhoto
         ]
         DELETE >=> choose [
-            routef "/photos/%s" deletePhoto
+            routef "/api/photos/%s" deletePhoto
         ]
     ]
 

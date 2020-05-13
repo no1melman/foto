@@ -15,7 +15,7 @@ events {
     multi_accept on;
 }
 http {
-    open_file_cache max=200000 inactive=20s;
+    open_file_cache max=20000000 inactive=20s;
     open_file_cache_valid 30s;
     open_file_cache_min_uses 2;
     open_file_cache_errors on;
@@ -53,6 +53,7 @@ http {
     reset_timedout_connection on;
     # request timed out -- default 60
     client_body_timeout 10;
+    client_max_body_size 200M;
     # if client stop responding, free up memory -- default 60
     send_timeout 2;
     # server will close connection after this time -- default 75
