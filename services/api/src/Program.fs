@@ -1,9 +1,12 @@
 open System
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
+open Microsoft.AspNetCore
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.DependencyInjection
 open Giraffe
+open Microsoft.Extensions.Configuration
+open Microsoft.Extensions.Logging
 
 let createMongo (connectionString:string) (name:string) =
     let client = MongoDB.Driver.MongoClient connectionString
@@ -16,9 +19,15 @@ let webApp personHandler =
     ]
 
 let configureApp (app : IApplicationBuilder) =
-    // Add Giraffe to the ASP.NET Core pipeline
+    
+    let configuration: IConfiguration = app.ApplicationServices.GetRequiredService<IConfiguration>()
+    let loggerFactory = app.ApplicationServices.GetRequiredService<ILoggerFactory>()
+    let logger = loggerFactory.CreateLogger "configureApp"
 
-    let mongoDatabaseFactory = createMongo "mongodb://localhost:27017"
+    let mongoConnectionString = configuration.GetValue<string> "MongoHost"
+    logger.LogInformation("Using mongo host {MongoHost}", mongoConnectionString)
+
+    let mongoDatabaseFactory = createMongo mongoConnectionString
 
     let photoHandler = mongoDatabaseFactory "foto" 
                        |> Photo.initialiseRoute
@@ -35,13 +44,9 @@ let configureServices (services : IServiceCollection) =
 
 [<EntryPoint>]
 let main _ =
-    Host.CreateDefaultBuilder()
-        .ConfigureWebHostDefaults(
-            fun webHostBuilder ->
-                webHostBuilder
-                    .Configure(configureApp)
-                    .ConfigureServices(configureServices)
-                    |> ignore)
+    WebHost.CreateDefaultBuilder()
+        .ConfigureServices(configureServices)
+        .Configure(configureApp)
         .Build()
         .Run()
     0
