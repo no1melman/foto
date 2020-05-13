@@ -1,0 +1,35 @@
+apiVersion: skaffold/v2beta1
+kind: Config
+
+metadata:
+  name: foto
+
+build:
+  tagPolicy:
+    sha256: {}
+  local:
+    useBuildkit: true
+  artifacts:
+    - image: foto-api
+      context: services/api/
+      docker: {}
+    - image: foto-ui
+      context: services/ui/app/
+      docker: {}
+
+deploy:
+  helm:
+    releases:
+      - name: foto-api
+        chartPath: k8s/foto-api
+        values:
+          image.repository: foto-api
+        setValues:
+          env.mongoHost: mongodb://mongo-dev-mongodb.mongo.svc.cluster.local
+          env.logLevel: Trace
+        namespace: foto
+      - name: foto-ui
+        chartPath: k8s/foto-ui
+        values:
+          image.repository: foto-ui
+        namespace: foto
