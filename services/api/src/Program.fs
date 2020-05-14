@@ -7,6 +7,7 @@ open Microsoft.Extensions.DependencyInjection
 open Giraffe
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Logging
+open Microsoft.AspNetCore.Server.Kestrel.Core
 
 let createMongo (connectionString:string) (name:string) =
     let client = MongoDB.Driver.MongoClient connectionString
@@ -42,9 +43,13 @@ let configureServices (services : IServiceCollection) =
     
     services.AddCors(fun cors -> cors.AddDefaultPolicy(fun policy -> policy.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin() |> ignore )) |> ignore
 
+let kestrelSetup (options: KestrelServerOptions) =
+    options.Limits.MaxRequestBodySize <- 52428800 |> int64 |> Nullable
+
 [<EntryPoint>]
 let main _ =
     WebHost.CreateDefaultBuilder()
+        .UseKestrel(kestrelSetup)
         .ConfigureServices(configureServices)
         .Configure(configureApp)
         .Build()
