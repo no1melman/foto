@@ -9,95 +9,88 @@ open MongoDB.Bson
 open MongoDB.Driver.GridFS
 open System.Threading.Tasks
 open System
-   
-type NotFoundMessage = { message: string; }
 
-type Photograph = { Id: BsonObjectId; FileName: string; GridFsId: BsonObjectId; ContentType: string; }
+open Mongo
+open Domain
+open AspNetHelpers  
 
-let compose (switchFn: _ -> Task<_ option>) (twoTrackInput: Task<_ option>) = 
+
+let getPhotoCollection = getCollection<Photograph> "photograph"
+
+let getPhotoBucket = getBucket "photos"
+
+let getSinglePhoto (collection: IMongoCollection<Photograph>) id = 
+    getSingle<Photograph> (fun p -> p.Id = id) collection
+ 
+let getPhotoGridFile (bucket: IGridFSBucket) photo =  
+    let filterDefinitionBuilder = Builders<GridFSFileInfo>.Filter.Eq((fun f -> f.Filename), photo.FileName)
+    getGridFile filterDefinitionBuilder bucket photo
+
+
+let writeFile (ctx: HttpContext) (bucket: GridFSBucket) (gridFile: GridFSFileInfo, photo: Photograph) =
+    ctx.Response.ContentLength <- gridFile.Length |> Nullable
+    ctx.Response.ContentType <- photo.ContentType
     task {
-        let! li = twoTrackInput
-        match li with
-        | Some s -> return! switchFn s
-        | None -> return None
+        do! bucket.DownloadToStreamAsync(gridFile.Id, ctx.Response.Body)
+        return Some ctx
     }
-
-let (>>=) (twoTrackInput: Task<_ option>) (switchFn: _ -> Task<_ option>) =
-    compose switchFn twoTrackInput
-
-let getCollection (database: IMongoDatabase) = database.GetCollection<Photograph> "photographs"
-let getBucket (database: IMongoDatabase) = 
-    let gridFsOptions = GridFSBucketOptions()
-    gridFsOptions.BucketName <- "photos"
-    gridFsOptions.ChunkSizeBytes <- 4194304 // 4mb
-    gridFsOptions.WriteConcern <- WriteConcern.WMajority
-    gridFsOptions.ReadPreference <- ReadPreference.Secondary
-
-    GridFSBucket(database, gridFsOptions)
 
 let getPhotos (databaseFn: unit-> IMongoDatabase) : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) -> 
         let database = databaseFn()
-        let collection = getCollection database
+        let collection = getPhotoCollection database
         task {
             let! cursor = collection.FindAsync<Photograph>(fun p -> true)
             let! hasMoved = cursor.MoveNextAsync()
-            let result = 
-                match hasMoved with
-                | true -> json cursor.Current next ctx
-                | false -> 
-                    let message = { message = "No Photos found" }
-                    RequestErrors.notFound (json message) next ctx
-            return! result
+            match hasMoved with
+            | true -> return! json { result = Some cursor.Current; error = None } next ctx
+            | false -> return! notFound { result = None; error = Some "No Photos found"  } next ctx
         }
 
 let getPhoto (databaseFn: unit -> IMongoDatabase) ( id: string ) : HttpHandler =
     fun (next : HttpFunc) (ctx: HttpContext) ->
         let database = databaseFn()
-        let collection = getCollection database
+        let collection = getPhotoCollection database
         task {
-            let inputId = ObjectId.Parse id |> BsonObjectId
-            let! cursor = collection.FindAsync<Photograph>(fun p -> p.Id = inputId )
-            let! hasMoved = cursor.MoveNextAsync()
-            let result = 
-                match hasMoved with
-                | true when cursor.Current |> List.ofSeq |> List.length <> 0  -> json (cursor.Current |> Seq.head) next ctx
-                | _ ->
-                    let message = { message = "No Photo found" }
-                    RequestErrors.notFound (json message) next ctx
-            return! result 
+            let! photo = id
+                         |> toBsonObjectId 
+                         |> getSinglePhoto collection
+            
+            match photo with
+            | Some p -> return! json { result = Some p; error = None } next ctx
+            | None -> return! notFound { error = Some "No Photo found"; result = None }  next ctx
         }
 
 let savePhoto (databaseFn: unit -> IMongoDatabase ) : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) -> 
         let database = databaseFn()
-        let collection = getCollection database
+        let collection = getPhotoCollection database
         task {
             let! photo = ctx.BindJsonAsync<Photograph>()
-            let photoWithId = { photo with Id = BsonObjectId ( ObjectId.GenerateNewId() ) }
+            let photoWithId = { photo with Id = ObjectId.GenerateNewId() |> BsonObjectId }
             do! collection.InsertOneAsync(photoWithId)
-            return! json photoWithId next ctx
+            return! json { result = Some photoWithId; error = None } next ctx
         }
 
-let deletePhoto (databaseFn: unit -> IMongoDatabase ) (id: string) : HttpHandler = 
+let deletePhoto (databaseFn: unit -> IMongoDatabase) (id: string) : HttpHandler = 
     fun (next : HttpFunc) (ctx : HttpContext) -> 
         let database = databaseFn()
-        let collection = getCollection database
-        let bucket = getBucket database
+        let collection = getPhotoCollection database
+        let bucket = getPhotoBucket database
         task {
-            let oId = BsonObjectId (ObjectId id) 
+            let oId = id |> toBsonObjectId
             let! result = collection.FindOneAndDeleteAsync<Photograph>(fun p -> p.Id = oId)
 
             do! bucket.DeleteAsync(result.GridFsId)
 
-            return! text "awesome sauce" next ctx 
+            return! json { result = Some (sprintf "Deleted %s" id); error = None } next ctx 
         }
 
 let uploadPhoto (databaseFn: unit -> IMongoDatabase) : HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) -> 
         let database = databaseFn()
-        let collection = getCollection database
-        let bucket = getBucket database
+        let collection = getPhotoCollection database
+        let bucket = getPhotoBucket database
 
         let uploadFile (file: IFormFile) =
             async {
@@ -116,57 +109,31 @@ let uploadPhoto (databaseFn: unit -> IMongoDatabase) : HttpHandler =
         task {
             let! photos = ctx.Request.Form.Files |> Seq.map uploadFile |> Async.Parallel |> Async.StartAsTask
 
-            return! json photos next ctx
+            return! json { result = Some photos; error = None } next ctx
         }
 
 let downloadPhoto (databaseFn: unit -> IMongoDatabase ) (id: string) =
     fun (next: HttpFunc) (ctx: HttpContext) -> 
         let database = databaseFn()
-        let collection = getCollection database
-        let bucket = getBucket database
-        let getPhoto id =
-            task {
-                let! cursor = collection.FindAsync<Photograph>(fun p -> p.Id = id )
-                let! hasMoved = cursor.MoveNextAsync()
-                return match hasMoved with
-                       | true when cursor.Current |> List.ofSeq |> List.length <> 0 -> cursor.Current |> Seq.tryHead
-                       | _ -> None
-            }
-
-        let getGridFile photo =
-            task {
-                let builder = Builders<GridFSFileInfo>.Filter.Eq((fun f -> f.Filename), photo.FileName)
-                let findOptions = new GridFSFindOptions()
-                findOptions.Limit <- 1 |> Nullable
-                let! cursor = bucket.FindAsync(builder, findOptions)
-                let! hasMoved = cursor.MoveNextAsync()
-                match hasMoved with
-                | true -> match cursor.Current |> Seq.tryHead with
-                          | Some gridFile -> return Some (gridFile, photo)
-                          | None -> return None
-                | false -> return None
-            }
-
-        let writeFile (bucket: GridFSBucket) (gridFile: GridFSFileInfo, photo: Photograph) =
-            ctx.Response.ContentLength <- gridFile.Length |> Nullable
-            ctx.Response.ContentType <- photo.ContentType
-            task {
-                do! bucket.DownloadToStreamAsync(gridFile.Id, ctx.Response.Body)
-                return Some ctx
-            }
+        let collection = getPhotoCollection database
+        let bucket = getPhotoBucket database
         
-        let toBsonObjectId = ObjectId.Parse >> BsonObjectId
-        let writeFileToBucket = writeFile bucket
+        let getPhotoFromCollection = getSinglePhoto collection
+        let getPhotoGridFileFromBucket = getPhotoGridFile bucket
+
+        
+        let writeFileToClientFromBucket = writeFile ctx bucket 
 
         task {
-            let! res = toBsonObjectId id 
-                       |> getPhoto 
-                       >>= getGridFile 
-                       >>= writeFileToBucket
+            let! res = id 
+                       |> toBsonObjectId  
+                       |> getPhotoFromCollection 
+                       >>= getPhotoGridFileFromBucket 
+                       >>= writeFileToClientFromBucket
                    
             match res with
             | Some c -> return! next c
-            | None -> return! RequestErrors.notFound (json { message = "No photo found with that Id" }) next ctx
+            | None -> return! notFound { error = Some "No photo found with that Id"; result = None } next ctx
         }
         
 

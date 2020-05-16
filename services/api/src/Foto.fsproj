@@ -3,6 +3,10 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Domain.fs" />
+    <Compile Include="Mongo.fs" />
+    <Compile Include="AspNetHelpers.fs" />
+    <Compile Include="Album.fs" />
     <Compile Include="Photo.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

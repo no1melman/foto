@@ -13,10 +13,11 @@ let createMongo (connectionString:string) (name:string) =
     let client = MongoDB.Driver.MongoClient connectionString
     fun () -> client.GetDatabase name
 
-let webApp personHandler =
+let webApp personHandler albumHandler =
     choose [    
         route "/health" >=> text "all good"
         personHandler
+        albumHandler
     ]
 
 let configureApp (app : IApplicationBuilder) =
@@ -29,12 +30,20 @@ let configureApp (app : IApplicationBuilder) =
     logger.LogInformation("Using mongo host {MongoHost}", mongoConnectionString)
 
     let mongoDatabaseFactory = createMongo mongoConnectionString
+    let fotoDb = mongoDatabaseFactory "foto"
 
-    let photoHandler = mongoDatabaseFactory "foto" 
+    // would like to do
+    // mongoDatabaseFactory "foto" |> Photo.initialiseRoute |> Album.initialiseRoute
+    // that would be sick, or create a chaining operator
+    // suppose you could just fold as well passing the factory on each fold...
+
+    let photoHandler = fotoDb
                        |> Photo.initialiseRoute
+    let albumHandler = fotoDb
+                       |> Album.initialiseRoute
 
     app.UseCors() |> ignore
-    app.UseGiraffe (webApp photoHandler)
+    app.UseGiraffe (webApp photoHandler albumHandler)
 
 let configureServices (services : IServiceCollection) =
     // Add Giraffe dependencies
