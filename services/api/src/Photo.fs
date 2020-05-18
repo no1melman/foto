@@ -99,8 +99,9 @@ let uploadPhoto (databaseFn: unit -> IMongoDatabase) : HttpHandler =
                 let photo = {
                     Id = BsonObjectId(ObjectId.GenerateNewId());
                     GridFsId = BsonObjectId(id);
-                    FileName = file.FileName
-                    ContentType = file.ContentType
+                    FileName = file.FileName;
+                    ContentType = file.ContentType;
+                    Tags = list.Empty
                 }
                 collection.InsertOneAsync(photo) |> Async.AwaitTask |> ignore
                 return photo

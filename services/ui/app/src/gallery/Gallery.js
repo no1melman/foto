@@ -12,7 +12,7 @@ const Gallery = ({ refresh }) => {
       .then(setPhotos);
 
   useEffect(() => {
-    console.log('fetching photos')
+    console.log('fetching photos');
     getPhotos();
   }, [refresh]);
 
@@ -43,8 +43,6 @@ const Gallery = ({ refresh }) => {
     });
   }, [photos]);
 
-  console.log(photoBlobs);
-
   const createUrl = blob =>
     (window.URL || window.webkitURL).createObjectURL(blob);
 
@@ -63,7 +61,7 @@ const Gallery = ({ refresh }) => {
         <div key={p.id} className="gallery-item">
           <p>{p.fileName}</p>
           {photoBlobs[p.id] && (
-            <img src={createUrl(photoBlobs[p.id], p.fileName)} width="100%"/>
+            <img src={createUrl(photoBlobs[p.id], p.fileName)} width="100%" />
           )}
           <button onClick={deleteImage(p.id)}>Delete</button>
         </div>

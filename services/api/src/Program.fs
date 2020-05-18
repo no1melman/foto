@@ -8,6 +8,8 @@ open Giraffe
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Logging
 open Microsoft.AspNetCore.Server.Kestrel.Core
+open Giraffe.Serialization
+open System.Text.Json
 
 let createMongo (connectionString:string) (name:string) =
     let client = MongoDB.Driver.MongoClient connectionString
@@ -21,7 +23,6 @@ let webApp personHandler albumHandler =
     ]
 
 let configureApp (app : IApplicationBuilder) =
-    
     let configuration: IConfiguration = app.ApplicationServices.GetRequiredService<IConfiguration>()
     let loggerFactory = app.ApplicationServices.GetRequiredService<ILoggerFactory>()
     let logger = loggerFactory.CreateLogger "configureApp"
@@ -41,7 +42,7 @@ let configureApp (app : IApplicationBuilder) =
                        |> Photo.initialiseRoute
     let albumHandler = fotoDb
                        |> Album.initialiseRoute
-
+    
     app.UseCors() |> ignore
     app.UseGiraffe (webApp photoHandler albumHandler)
 
@@ -50,6 +51,14 @@ let configureServices (services : IServiceCollection) =
     services.AddGiraffe() |> ignore
     services.AddLogging() |> ignore
     
+    // setup json serialiser which handles options serialisation
+    let serialiserOptions = JsonSerializerOptions()
+    serialiserOptions.PropertyNameCaseInsensitive <- true
+    serialiserOptions.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase
+    serialiserOptions.Converters.Add(AspNetHelpers.OptionConverterFactory())
+    
+    services.AddSingleton<IJsonSerializer>(AspNetHelpers.Core3JsonSerializer(serialiserOptions)) |> ignore
+
     services.AddCors(fun cors -> cors.AddDefaultPolicy(fun policy -> policy.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin() |> ignore )) |> ignore
 
 let kestrelSetup (options: KestrelServerOptions) =
@@ -59,6 +68,7 @@ let kestrelSetup (options: KestrelServerOptions) =
 let main _ =
     WebHost.CreateDefaultBuilder()
         .UseKestrel(kestrelSetup)
+        
         .ConfigureServices(configureServices)
         .Configure(configureApp)
         .Build()
