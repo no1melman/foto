@@ -9,7 +9,8 @@ open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Logging
 open Microsoft.AspNetCore.Server.Kestrel.Core
 open Giraffe.Serialization
-open System.Text.Json
+open Newtonsoft.Json
+open Newtonsoft.Json.Serialization
 
 let createMongo (connectionString:string) (name:string) =
     let client = MongoDB.Driver.MongoClient connectionString
@@ -52,12 +53,11 @@ let configureServices (services : IServiceCollection) =
     services.AddLogging() |> ignore
     
     // setup json serialiser which handles options serialisation
-    let serialiserOptions = JsonSerializerOptions()
-    serialiserOptions.PropertyNameCaseInsensitive <- true
-    serialiserOptions.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase
-    serialiserOptions.Converters.Add(AspNetHelpers.OptionConverterFactory())
+    let serialiserOptions = JsonSerializerSettings()
+    serialiserOptions.ContractResolver <- CamelCasePropertyNamesContractResolver()
+    serialiserOptions.Converters.Add(AspNetHelpers.OptionConverter())
     
-    services.AddSingleton<IJsonSerializer>(AspNetHelpers.Core3JsonSerializer(serialiserOptions)) |> ignore
+    services.AddSingleton<IJsonSerializer>(NewtonsoftJsonSerializer(serialiserOptions)) |> ignore
 
     services.AddCors(fun cors -> cors.AddDefaultPolicy(fun policy -> policy.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin() |> ignore )) |> ignore
 

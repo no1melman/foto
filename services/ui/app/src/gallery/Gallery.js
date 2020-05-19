@@ -9,6 +9,7 @@ const Gallery = ({ refresh }) => {
   const getPhotos = () =>
     fetch('/api/photos')
       .then(res => res.json())
+      .then(res => res.result)
       .then(setPhotos);
 
   useEffect(() => {

@@ -1,62 +1,32 @@
 ﻿module AspNetHelpers
 
 open Giraffe
-open System.Text.Json.Serialization
 open System
-open System.Text.Json
-open Giraffe.Serialization
-open System.IO
-open System.Text
-open System.Threading.Tasks
+open Newtonsoft.Json
+open System.Reflection
 
 type ResponseMessage<'T> = { result: 'T option; error: string option }
 
 let notFound (message: ResponseMessage<'T>) = RequestErrors.notFound (json message)
 
-type OptionConverter<'T> =
-    inherit JsonConverter<'T option>
-    new() = { inherit JsonConverter<'T option> }
-    override _.Write(writer, value, serializer) =
-        match value with
-        | Some optionValue -> 
-            JsonSerializer.Serialize(writer, optionValue, serializer)
-        | None -> 
-            writer.WriteNullValue()
+type OptionConverter =
+    inherit JsonConverter
+    new() = { inherit JsonConverter }
+    override _.CanConvert(objectType: Type) =
+        let can = objectType.GetGenericTypeDefinition() = typedefof<Option<_>>
+        can
+    override _.WriteJson(writer: JsonWriter, value, serializer: JsonSerializer) =
+        let properties = value.GetType().GetProperties()
+        let isSomeProperty = properties |> Array.find (fun prop -> prop.Name = "IsSome")
+        let isSome = isSomeProperty.GetValue(value, [| value |]) :?> bool
+                       
+        match isSome with
+        | true -> 
+            let valueProperty = properties |> Array.find(fun prop -> prop.Name = "Value")
+            let valueValue = valueProperty.GetValue(value)
+            serializer.Serialize(writer, valueValue)
+        | false -> 
+            writer.WriteNull()
 
-    override _.Read(reader, typeToConvert, serializer) =
+    override _.ReadJson(reader, objectType, existingValue, serializer) =
         failwith "Not implemented"
-
-type OptionConverterFactory =
-    inherit JsonConverterFactory
-    new() = { inherit JsonConverterFactory }
-    override __.CanConvert(typeToConvert: Type) =
-        let isGenericType = typeToConvert.IsGenericType
-        (isGenericType && typeToConvert.GetGenericTypeDefinition() = typedefof<Option<_>>)
-    override __.CreateConverter(typeToConvert: Type, options: JsonSerializerOptions) : JsonConverter =
-        let optionType = typeToConvert.GetGenericArguments().[0]
-        let converter = Activator.CreateInstance(typedefof<OptionConverter<_>>.MakeGenericType([| optionType |])) :?> JsonConverter
-        converter
-
-type Core3JsonSerializer (options: JsonSerializerOptions) =
- 
-    interface IJsonSerializer with
-        member __.SerializeToString (x : 'T) =
-            JsonSerializer.Serialize (x, options)
-
-        member __.SerializeToBytes (x : 'T) =
-            JsonSerializer.SerializeToUtf8Bytes (x, options)
-
-        member __.SerializeToStreamAsync (x : 'T) (stream : Stream) =
-            JsonSerializer.SerializeAsync(stream, x, options)
-
-        member __.Deserialize<'T> (json : string) : 'T =
-            let bytes = Encoding.UTF8.GetBytes json
-            let rbytes = ReadOnlySpan<byte>(bytes)
-            JsonSerializer.Deserialize(rbytes, options)
-
-        member __.Deserialize<'T> (bytes : byte array) : 'T =
-            let rbytes = ReadOnlySpan<byte>(bytes)
-            JsonSerializer.Deserialize(rbytes, options)
-
-        member __.DeserializeAsync<'T> (stream : Stream) : Task<'T> =
-            JsonSerializer.DeserializeAsync(stream, options).AsTask()
