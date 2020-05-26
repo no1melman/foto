@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import PropTypes from 'prop-types';
 
 import './FilesDragAndDrop.scss';
 
-export default function FilesDragAndDrop({ onUpload }) {
+const FilesDragAndDrop = ({ onDrop, children }) => {
   const drop = useRef(null);
   const [dragging, setDragging] = useState(false);
   const drag = useRef(null);
@@ -34,7 +33,7 @@ export default function FilesDragAndDrop({ onUpload }) {
     const { files } = e.dataTransfer;
 
     if (files && files.length) {
-      onUpload(files);
+      onDrop(files);
     }
   };
 
@@ -59,23 +58,11 @@ export default function FilesDragAndDrop({ onUpload }) {
   return (
     <div ref={drop} className="FilesDragAndDrop">
       {dragging && (
-        <div className="FilesDragAndDrop__placeholder" ref={drag}>
-          Drop that file down low
-          <span role="img" aria-label="emoji" className="area__icon">
-            &#128526;
-          </span>
-        </div>
+        <div className="FilesDragAndDrop__placeholder" ref={drag}></div>
       )}
-      <div className="FilesDragAndDrop__area">
-        Hey, drop me some files
-        <span role="img" aria-label="emoji" className="area__icon">
-          &#128526;
-        </span>
-      </div>
+      {children}
     </div>
   );
-}
-
-FilesDragAndDrop.propTypes = {
-  onUpload: PropTypes.func.isRequired,
 };
+
+export default FilesDragAndDrop;

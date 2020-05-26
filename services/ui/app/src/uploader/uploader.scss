@@ -1,0 +1,31 @@
+.uploader-container {
+  position: absolute;
+
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 150px;
+  border-top: 2px solid;
+
+  padding-top: 5px;
+
+  display: flex;
+
+  &__tooltip {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #a6b1e1;
+    color: #424874;
+    padding: 7px 15px;
+
+    &-close {
+      margin: 0 0 0 14px;
+      padding: 2px 4px;
+      cursor: pointer;
+      &:hover {
+        color: darken($color: #424874, $amount: 20);
+      }
+    }
+  }
+}

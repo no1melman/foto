@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
-import FilesDragAndDrop from '../components/FilesDragAndDrop';
+import './uploader.scss';
 
 const toMb = size => `${(size / 1024 / 1024).toPrecision(2)} MB`;
 
 const mapFiles = files => {
+  if (!files) return [];
+
   const display = [];
   Array.prototype.map.call(files, file => {
     const { name, size, type } = file;
@@ -25,24 +28,17 @@ const mapFiles = files => {
   return display;
 };
 
-const Uploader = ({ onUploaded }) => {
-  const [displayFiles, setDisplayFiles] = useState([]);
-  const [files, setFiles] = useState([]);
+const Uploader = ({ onUploaded, onClose, files }) => {
+  const [displayFiles, setDisplayFiles] = useState(mapFiles(files));
+  const [rawFiles, setRawFiles] = useState(files);
   const [progress, setProgress] = useState(0);
   const [requestState, setRequestState] = useState('');
-
-  const onUpload = files => {
-    console.log(files);
-    setFiles(files);
-    const display = mapFiles(files);
-    setDisplayFiles(display);
-  };
 
   const uploadFiles = () => {
     setProgress(0);
     const form = new FormData();
 
-    Array.prototype.forEach.call(files, (file, i) => {
+    Array.prototype.forEach.call(rawFiles, (file, i) => {
       form.append(`input${i}`, file);
     });
 
@@ -71,43 +67,45 @@ const Uploader = ({ onUploaded }) => {
 
   const removeFile = name => e => {
     e.preventDefault();
-    e.stopPropagation();  
+    e.stopPropagation();
 
     const filtered = Array.prototype.filter.call(
-      files,
+      rawFiles,
       file => file.name !== name
     );
 
-    onUpload(filtered);
+    setRawFiles(filtered);
+    setDisplayFiles(mapFiles(filtered));
+  };
+
+  const handleClose = () => {
+    onClose();
   };
 
   return (
-    <div>
-      <FilesDragAndDrop onUpload={onUpload} />
+    <div className="uploader-container">
+      {displayFiles.map(f => (
+        <div key={f.name}>
+          <img src={f.url} width={100} />
+          <br />
+          Name: {f.name}
+          <br />
+          Size: {f.displaySize}
+          <br />
+          Type: {f.type}
+          <br />
+          <button onClick={removeFile(f.name)}>Delete</button>
+        </div>
+      ))}
 
-      <div style={{ display: 'flex' }}>
-        {displayFiles.map(f => (
-          <div key={f.name}>
-            <img src={f.url} width={100} />
-            <br />
-            Name: {f.name}
-            <br />
-            Size: {f.displaySize}
-            <br />
-            Type: {f.type}
-            <br />
-            <button onClick={removeFile(f.name)}>Delete</button>
-          </div>
-        ))}
-      </div>
-
-      <button onClick={uploadFiles}>
+      <div className="uploader-container__tooltip">
         Upload ({toMb(displayFiles.reduce((r, f) => r + f.size, 0))})
-      </button>
-
-      <p>{progress !== 0 && progress}</p>
-
-      <p>{progress === 100 && requestState}</p>
+        <span
+          className="uploader-container__tooltip-close"
+          onClick={handleClose}>
+          <FontAwesomeIcon icon="times" />
+        </span>
+      </div>
     </div>
   );
 };

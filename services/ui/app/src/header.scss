@@ -1,0 +1,45 @@
+.header-container {
+  display: flex;
+  border-bottom: 1px solid lighten($color: gray, $amount: 45%);
+  background-color: darken($color: #424874, $amount: 20%);
+  color: lighten($color: #f4eeff, $amount: 20%);
+
+
+  > .header-title {
+    width: 400px;
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 10px 0;
+
+    > h1 {
+      margin: 0;
+      padding: 0;
+    }
+  }
+
+  > .header-menu {
+    width: 500px;
+    display: flex;
+
+    > .header-menuitem {
+      flex: 1;
+      display: flex;
+      flex-flow: column nowrap;
+      justify-content: center;
+      align-items: center;
+
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+
+      &:hover {
+        border-bottom: 2px solid lighten(#f4eeff, 40%);
+      }
+
+      > span {
+        display: block;
+      }
+    }
+  }
+}
