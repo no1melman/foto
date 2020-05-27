@@ -1,6 +1,12 @@
 .uploader-container {
-  position: absolute;
+  transform: translateY(160px);
+  transition: transform 0.5s ease-out;
 
+  &.uploader-container-show {
+    transform: translateY(0);
+  }
+
+  position: absolute;
   bottom: 0;
   left: 0;
   right: 0;

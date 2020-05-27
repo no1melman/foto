@@ -13,12 +13,10 @@ const Gallery = ({ refresh }) => {
       .then(setPhotos);
 
   useEffect(() => {
-    console.log('fetching photos');
     getPhotos();
   }, [refresh]);
 
   useEffect(() => {
-    console.log('running photos effect', photos.length);
     if (photos.length === 0) return;
 
     Promise.all(

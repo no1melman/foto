@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import './uploader.scss';
+import DisplayFile from './DisplayFile';
 
 const toMb = size => `${(size / 1024 / 1024).toPrecision(2)} MB`;
 
@@ -25,14 +26,34 @@ const mapFiles = files => {
       url,
     });
   });
+
   return display;
 };
 
-const Uploader = ({ onUploaded, onClose, files }) => {
-  const [displayFiles, setDisplayFiles] = useState(mapFiles(files));
-  const [rawFiles, setRawFiles] = useState(files);
+const Uploader = ({ onUploaded, files }) => {
+  const [displayFiles, setDisplayFiles] = useState([]);
+  const [rawFiles, setRawFiles] = useState([]);
+  const [fileCount, setFileCount] = useState(0);
   const [progress, setProgress] = useState(0);
   const [requestState, setRequestState] = useState('');
+
+  useLayoutEffect(() => {
+    let newFiles = Array.prototype.map
+      .call(files, (file, i) => {
+        console.log(file, rawFiles);
+        if (rawFiles.some(x => x.name === file.name)) {
+          return null;
+        }
+
+        return file;
+      })
+      .filter(x => x);
+    let combined = rawFiles.concat(newFiles);
+
+    setDisplayFiles(mapFiles(combined));
+    setRawFiles(combined);
+    setFileCount(combined.length);
+  }, [files]);
 
   const uploadFiles = () => {
     setProgress(0);
@@ -79,30 +100,28 @@ const Uploader = ({ onUploaded, onClose, files }) => {
   };
 
   const handleClose = () => {
-    onClose();
+    setRawFiles([]);
+    setDisplayFiles([]);
+    setFileCount(0);
   };
 
+  const classNames = [
+    'uploader-container',
+    fileCount === 0 ? '' : 'uploader-container-show',
+  ].join(' ');
+
   return (
-    <div className="uploader-container">
+    <div className={classNames}>
       {displayFiles.map(f => (
-        <div key={f.name}>
-          <img src={f.url} width={100} />
-          <br />
-          Name: {f.name}
-          <br />
-          Size: {f.displaySize}
-          <br />
-          Type: {f.type}
-          <br />
-          <button onClick={removeFile(f.name)}>Delete</button>
-        </div>
+        <DisplayFile key={f.name} file={f} onDelete={removeFile} />
       ))}
 
       <div className="uploader-container__tooltip">
         Upload ({toMb(displayFiles.reduce((r, f) => r + f.size, 0))})
         <span
           className="uploader-container__tooltip-close"
-          onClick={handleClose}>
+          onClick={handleClose}
+        >
           <FontAwesomeIcon icon="times" />
         </span>
       </div>

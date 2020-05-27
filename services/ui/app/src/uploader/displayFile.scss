@@ -1,0 +1,87 @@
+.display-file {
+  position: relative;
+  margin: 0 5px 5px 5px;
+  width: 200px;
+  overflow: hidden;
+
+  > img {
+    width: 110%;
+  }
+
+  &:hover {
+    .display-file_overlay {
+      transform: translateY(0);
+      transition: transform 0.5s ease-out;
+    }
+  }
+
+  &_overlay {
+    transform: translateY(200px);
+    transition: transform 0.5s ease-out 0.5s;
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: space-around;
+    z-index: 79;
+    overflow: hidden;
+    color: darken($color: #424874, $amount: 20%);
+    border-color: darken($color: #424874, $amount: 20%);
+    border-width: 2px;
+    border-style: solid;
+    font-size: 1.4em;
+    font-weight: bold;
+
+    &:before {
+      content: '';
+      position: absolute;
+      box-shadow: inset 0 0 0 200px rgba(255, 255, 255, 0.5);
+      filter: blur(10px);
+      left: -25px;
+      right: -25px;
+      top: -25px;
+      bottom: -25px;
+      z-index: 79;
+    }
+
+    &-content {
+      flex: 1;
+      color: inherit;
+      z-index: 99;
+      display: flex;
+      flex-flow: column nowrap;
+      padding: 4px;
+
+      &_top {
+        flex: 1;
+        display: block;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      &_middle {
+        flex: 1;
+        display: block;
+      }
+      &_bottom {
+        flex: 1;
+        display: block;
+      }
+    }
+
+    &-icon {
+      position: absolute;
+      cursor: pointer;
+      right: 5px;
+      top: 5px;
+      width: 20px;
+      z-index: 101;
+      color:  #424874;
+      &:hover {
+        color: darken($color: #424874, $amount: 20%);
+      }
+    }
+  }
+}
