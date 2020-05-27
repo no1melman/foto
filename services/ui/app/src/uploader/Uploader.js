@@ -50,10 +50,15 @@ const Uploader = ({ onUploaded, files }) => {
       .filter(x => x);
     let combined = rawFiles.concat(newFiles);
 
-    setDisplayFiles(mapFiles(combined));
     setRawFiles(combined);
-    setFileCount(combined.length);
   }, [files]);
+
+  useLayoutEffect(() => {
+    if (fileCount !== rawFiles.length) {
+      setFileCount(rawFiles.length);
+    }
+    setDisplayFiles(mapFiles(rawFiles));
+  }, [rawFiles]);
 
   const uploadFiles = () => {
     setProgress(0);
@@ -101,8 +106,6 @@ const Uploader = ({ onUploaded, files }) => {
 
   const handleClose = () => {
     setRawFiles([]);
-    setDisplayFiles([]);
-    setFileCount(0);
   };
 
   const classNames = [
